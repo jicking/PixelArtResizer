@@ -12,21 +12,28 @@ namespace PixelArtResizer
     class Program
     {
         static  int resizeRatio = 2;
+        static  string fileExtension = ".png";
+        private static bool willDoResize = true;
         private static bool willMoveFiles;
         private static bool willDoCleanup;
-        private static bool willDoResize;
-
+        
         static void Main(string[] args)
         {
-            int.TryParse(ConfigurationManager.AppSettings.Get("resizeRatio"), out resizeRatio);
-            bool.TryParse(ConfigurationManager.AppSettings.Get("willMoveFiles"), out willMoveFiles);
-            bool.TryParse(ConfigurationManager.AppSettings.Get("willDoCleanup"), out willDoCleanup);
-
             var root = Directory.GetCurrentDirectory();
             var files = Directory.GetFiles(root);
             int counter = 0;
 
-            files = files.Where(c => c.Contains(".png")).ToArray();
+            Console.Title = "PixelArtResizer V1.0 @jickingx";
+
+            int.TryParse(ConfigurationManager.AppSettings.Get("resizeRatio"), out resizeRatio);
+            bool.TryParse(ConfigurationManager.AppSettings.Get("willMoveFiles"), out willMoveFiles);
+            bool.TryParse(ConfigurationManager.AppSettings.Get("willDoCleanup"), out willDoCleanup);
+            fileExtension = ConfigurationManager.AppSettings.Get("fileExtension");
+
+            if (!fileExtension.Contains("."))
+                fileExtension = "." + fileExtension;
+
+            files = files.Where(c => c.Contains(fileExtension)).ToArray();
 
             if (files.Count() == 0)
             {
@@ -34,7 +41,9 @@ namespace PixelArtResizer
                 willMoveFiles = false;
                 willDoCleanup = false;
 
-                Console.WriteLine($"I have no [png] files to resize.");
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"Ooops! Looks like I have no [${fileExtension}] files to resize here.");
+                Console.ResetColor();
             }
 
             //RESIZE
@@ -42,14 +51,27 @@ namespace PixelArtResizer
             {
                 foreach (var path in files)
                 {
-                    var resizedImage = ResizeBitmap(path);
-                    File.Delete(path);
-                    resizedImage.Save(path);
-                    counter++;
+                    try
+                    {
+                        var resizedImage = ResizeBitmap(path);
+                        File.Delete(path);
+                        resizedImage.Save(path);
+                        counter++;
 
-                    Console.WriteLine($"RESIZED {path}");
+                        Console.WriteLine($"RESIZED {path}");
+                    }
+                    catch (Exception e)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine(e);
+                        Console.ResetColor();
+                    }
+
                 }
+
+                Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine($"DONE RESIZING {counter} FILES");
+                Console.ResetColor();
                 Console.WriteLine();
             }
 
@@ -66,7 +88,7 @@ namespace PixelArtResizer
                         var rootParent = Directory.GetParent(root).FullName;
                         var exportFolder = filename.Substring(0, filename.IndexOf("-"));
                         var newFileName = filename.Substring(filename.IndexOf("-") + 1);
-                        var exportPath = Path.Combine(Path.Combine(rootParent, exportFolder), newFileName);
+                        var exportPath = Path.Combine(Path.Combine(rootParent, exportFolder), newFileName.ToLower());
 
                         if (!Directory.Exists(Path.GetDirectoryName(exportPath)))
                             continue;
@@ -82,11 +104,15 @@ namespace PixelArtResizer
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine(e.Message);
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine(e);
+                        Console.ResetColor();
                     }
                 }
 
+                Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine($"DONE MOVING {counter} FILES");
+                Console.ResetColor();
                 Console.WriteLine();
             }
 
@@ -109,16 +135,20 @@ namespace PixelArtResizer
                     }
                     catch (Exception e)
                     {
+                        Console.ForegroundColor = ConsoleColor.Red;
                         Console.WriteLine(e);
+                        Console.ResetColor();
                     }
                 }
 
+                Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine($"DONE DELETING {counter} FILES");
+                Console.ResetColor();
                 Console.WriteLine();
             }
 
             Console.WriteLine($"===================================");
-            Console.WriteLine($"PixelArtResizer Done. Kill me now.");
+            Console.WriteLine($"PixelArtResizer was here. Kill me now.");
             Console.ReadLine();
         }
 
